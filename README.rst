@@ -1,9 +1,13 @@
-====================================
+####################################
 spiderware gps tracker binary format
-====================================
+####################################
+
+python-spiderwaregps is a library to decode and convert the custom binary tracking format of the spiderware gps tracker.
 
 gps states
 ==========
+
+::
 
     0 error, RFU=error code
     1 start up
@@ -25,6 +29,9 @@ gps states
 
 data format
 ===========
+
+
+::
 
     escape: 0x7E 
     
