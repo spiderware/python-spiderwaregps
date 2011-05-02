@@ -26,6 +26,7 @@ gps states
     14 waypoint, RFU=id
     15 accelerometer off
     16 accelerometer on
+    17 new track begins
 
 data format
 ===========
@@ -44,34 +45,35 @@ data format
     
     info frame
     Type:       1 Byte (0x00)
-    HW:       2 Byte | hardware version
-    FW:       2 Byte | software version
-    Batt:       2 Byte | battery state
-    ??? more ???
+    HW:         3 Byte | hardware version
+    FW:         3 Byte | software version
+    Format:     2 Byte | format version
+               -------
+                9 Byte
     
     time frame
     Type:       1 Byte (0x01)
     Time:       5 Byte | 2 Byte week, 3 Byte second
-            -------
-            6 Byte
+               -------
+                6 Byte
     
     location
     Type:       1 Byte (0x02)
     Time:       2 Byte | offest to time frame in s (max 18h)
-    lon,lat:     8 Byte | result=value/10'000'000
-    h_acc.     1 Byte | (*1)
+    lon,lat:    8 Byte | result=value/10'000'000
+    h_acc.      1 Byte | (*1)
     alt, acc:   3 Byte
     flas:       1 Byte
-            -------
-            16 Byte
+               -------
+               16 Byte
     
     state frame
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
     State:      1 Byte | new state
-    RFU:       1 Byte | depens on on new state
-            -------
-            5 Byte
+    RFU:        1 Byte | depens on on new state
+               -------
+                5 Byte
     
     
     *1)  result = value & 0x7F
