@@ -12,11 +12,11 @@ gps states
     0 error, RFU=error code
     1 start up
     2 stand by
-    3 wake up
+    3 wake up 
     4 break begins
-    5 break ends
-    6 gps on
-    7 gps off
+    5 break ends *
+    6 gps on *
+    7 gps off *
     8 battery low , RFU=percent
     9 charging begins, RFU=percent
     10 charging ends
@@ -27,6 +27,8 @@ gps states
     15 accelerometer off
     16 accelerometer on
     17 new track begins
+
+*) only used for debug
 
 data format
 ===========
@@ -48,8 +50,9 @@ data format
     HW:         3 Byte | hardware version
     FW:         3 Byte | software version
     Format:     2 Byte | format version
+    HW options. 1 Byte
                -------
-                9 Byte
+               10 Byte
     
     time frame
     Type:       1 Byte (0x01)
