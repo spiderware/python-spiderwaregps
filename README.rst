@@ -73,10 +73,9 @@ data format
     state frame
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
-    State:      1 Byte | new state
-    RFU:        1 Byte | depens on on new state
+    State+RFU:n*2 Byte | sys info (state and custom data)
                -------
-                5 Byte
+            n*2+3 Byte
     
     
     *1)  result = value & 0x7F
