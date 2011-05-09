@@ -37,9 +37,11 @@ def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
     
 def array2uint16(a):
-    return a[0]*0x100 + a[1]
-
-s = serial.Serial('/dev/tty.usbserial-A5004Gk9',115200,timeout=1)
+    try:
+        return a[0]*0x100 + a[1]
+    except:
+        print a
+s = serial.Serial('/dev/tty.usbserial-A5UBS4UK',115200,timeout=1)
 #('/dev/tty.usbserial-A5004Gk9',115200)
 
 
@@ -52,12 +54,12 @@ frame = []
 time_on = 0
 time_off = 0
 time_n = 0
+cycle_cnt = 0
 c = ' '
 bin = open('data.bin','w');
 
-while not c == '|':
-    c = s.read(1)
 x = 0
+byte = 0
 while data_in:
     try:
         byte = int(s.read(2),16)
@@ -76,7 +78,7 @@ while data_in:
         # start escape
         escape = True
            
-    elif byte == 0x7e and escape:
+    elif byte == 0x7f and escape:
         # escape FF
         frame.append(0xFF)   
         escape = False 
@@ -92,6 +94,7 @@ while data_in:
     else:
         if byte == 0xff:
             data_in = False
+            data.append(frame)
         else:
             #print hex(byte)
             frame.append(byte)
@@ -115,44 +118,49 @@ for frame in data:
         #print 'DATA:',frame, 'LEN:', len(frame) 
         # time frame
         if frame[0] == 0x01:
-            week = array2uint16(frame[1:3])
-            system_tow = array2uint32([0,frame[3],frame[4],frame[5]])
-        
+            if len(frame) == 6:
+                week = array2uint16(frame[1:3])
+                system_tow = array2uint32([0,frame[3],frame[4],frame[5]])
+            else:
+                print 'bat time frame' 
         elif frame[0] == 0x02:
+            if len(frame) == 16:
             #print frame
             
             
-            f_cnt+=1
-            
-            
-            tow = system_tow + array2uint16(frame[1:3])   
-            
-            lat = array2uint32(frame[3:7])   
-            lon = array2uint32(frame[7:11]) 
-            alt = array2uint16(frame[11:13])    
-            h_error = frame[13]   
-            #print h_error 
-            v_error = frame[14]
-            flags =   frame[15]
-            #print h
-            if lat > 0x7fffffff:
-                lat = -0x7fffffff+lat 
-            if lon > 0x7fffffff:
-                lon = -0x7fffffff+lon 
-            if alt > 0x7fffffff:
-                alt = -0x7fffffff+alt 
-            if lat/10000000 < 47.0:
-                print 'error?'
-            s = tow
-            day = s/86400
-            h = (s-(day*86400))/3600
-            m = (s-(day*86400)-(h*3600))/60
-            s = s-(day*86400)-(h*3600)-(m*60)
-            
-            print '%d| %02d:%02d:%02d : pos: %.7f,%.7f\talt: %d\th:%d\tv:%d\tflags:%02x'%(f_cnt,h,m,s,f2sf(float(lat)/10000000),f2sf(float(lon)/10000000),alt,h_error,v_error,flags)
-            calculated.append([week,tow,f2sf(float(lat)/10000000),f2sf(float(lon)/10000000),alt])
+                f_cnt+=1
+                
+                
+                tow = system_tow + array2uint16(frame[1:3])   
+                
+                lat = array2uint32(frame[3:7])   
+                lon = array2uint32(frame[7:11]) 
+                alt = array2uint16(frame[11:13])    
+                h_error = frame[13]   
+                #print h_error 
+                v_error = frame[14]
+                flags =   frame[15]
+                #print h
+                if lat > 0x7fffffff:
+                    lat = -0x7fffffff+lat 
+                if lon > 0x7fffffff:
+                    lon = -0x7fffffff+lon 
+                if alt > 0x7fffffff:
+                    alt = -0x7fffffff+alt 
+                if lat/10000000 < 47.0:
+                    print 'error?'
+                s = tow
+                day = s/86400
+                h = (s-(day*86400))/3600
+                m = (s-(day*86400)-(h*3600))/60
+                s = s-(day*86400)-(h*3600)-(m*60)
+                
+                print '%d| %02d:%02d:%02d : pos: %.7f,%.7f\talt: %d\th:%d\tv:%d\tflags:%02x'%(f_cnt,h,m,s,f2sf(float(lat)/10000000),f2sf(float(lon)/10000000),alt,h_error,v_error,flags)
+                calculated.append([week,tow,f2sf(float(lat)/10000000),f2sf(float(lon)/10000000),alt])
+            else:
+                print 'frame 0x02 corrupt!!!'
     
-        elif len(frame) == 5 and frame[0] == 0x03:
+        elif len(frame) >= 5 and frame[0] == 0x03:
             
             tow = system_tow + array2uint16(frame[1:3])   
             s = tow
@@ -162,59 +170,69 @@ for frame in data:
             s = s-(day*86400)-(h*3600)-(m*60)
             stat = frame[3]
             
-                        
-            if stat == 0x00:
-                stat = 'ERROR'
-            elif stat == 0x01:
-                stat = 'START UP'
-            elif stat == 0x02:
-                stat = 'STAND BY'
-            elif stat == 0x03:
-                stat = 'WAKE UP'
-            elif stat == 0x04:
-                stat = 'BREAK BEGINS'
-            elif stat == 0x05:
-                stat = 'BREAK ENDS'
-            elif stat == 0x06:
-                stat = 'GPS ON'
-            elif stat == 0x07:
-                stat = 'GPS OFF'
-            elif stat == 0x08:
-                stat = 'BATTERY LOW'
-            elif stat == 0x09:
-                stat = 'CHARGE BEGINS'
-            elif stat == 0x0A:
-                stat = 'CHARGE ENDS'
-            elif stat == 0x0B:
-                stat = 'WALL POWER ON'
-            elif stat == 0x0C:
-                stat = 'WALL POWER OFF'
-            elif stat == 0x0D:
-                stat = 'PROFILE'
-            elif stat == 0x0E:
-                stat = 'WAYPOINT'
-            elif stat == 0x0F:
-                stat = 'ACC OFF'
-            elif stat == 0x10:
-                stat = 'ACC ON'
-            elif stat == 0x11:
-                stat = 'NEW TRACK'
-            elif stat == 0x12:
-                stat = 'BATT'
+            for i in xrange(len(frame[3:])/2): 
+                stat = frame[3+i*2]
+                rfu = frame[3+i*2+1]
+                if stat == 0x00:
+                    stat = 'ERROR'
+                elif stat == 0x01:
+                    stat = 'START UP'
+                    print '-----------------------------------'
+                elif stat == 0x02:
+                    stat = 'STAND BY'
+                elif stat == 0x03:
+                    stat = 'WAKE UP'
+                elif stat == 0x04:
+                    stat = 'BREAK BEGINS'
+                elif stat == 0x05:
+                    stat = 'BREAK ENDS'
+                elif stat == 0x06:
+                    stat = 'GPS ON'
+                    time_off += rfu;
+                elif stat == 0x07:
+                    stat = 'GPS OFF'
+                    time_on += rfu;
+                    cycle_cnt += 1;
+                elif stat == 0x08:
+                    stat = 'BATTERY LOW'
+                    rfu = rfu*24
+                elif stat == 0x09:
+                    stat = 'CHARGE BEGINS'
+                elif stat == 0x0A:
+                    stat = 'CHARGE ENDS'
+                elif stat == 0x0B:
+                    stat = 'WALL POWER ON'
+                elif stat == 0x0C:
+                    stat = 'WALL POWER OFF'
+                elif stat == 0x0D:
+                    stat = 'PROFILE'
+                elif stat == 0x0E:
+                    stat = 'WAYPOINT'
+                elif stat == 0x0F:
+                    stat = 'ACC OFF'
+                elif stat == 0x10:
+                    stat = 'ACC ON'
+                elif stat == 0x11:
+                    stat = 'NEW TRACK'
+                elif stat == 0x12:
+                    stat = 'BATT'
+                    rfu = rfu*24
+                    
+                else:
+                    stat = 'unknown state! '+'0x%02x'%stat
                 
-            else:
-                stat = 'unknown state! '+'0x%02x'%stat
-            
-            vbat = frame[4] * 24
-            ob.write('%02d:%02d:%02d,%d,%s\n'%(h,m,s,vbat, stat))
-            print '%d| %02d:%02d:%02d : Battery: %d\t%s'%(f_cnt,h,m,s,vbat, stat)
+                ob.write('%02d:%02d:%02d,%d,%s\n'%(h,m,s,rfu, stat))
+                print '%d| %02d:%02d:%02d : %s (%d)'%(f_cnt,h,m,s,stat,rfu)
             
             
         else:
             print 'unknown:',frame, len(frame)    
 
-time = time_on+time_off
-#print 'on:',time_on,'off:',time_off,((float(time_off)*.1+float(time_on)*40.0))/time,'mA,',float(time)/60,'min'
+if cycle_cnt and time_on and time_off:
+    print '----------------------- REPORT: --------------------------'
+    print 'GPS on:',time_on,'\tGPS off:',time_off,'\tcurrent:',float(1*time_off+35*time_on)/(time_on+time_off),'mA'#((float(time_off)*.1+float(time_on)*40.0))/time,'mA,',float(time)/60,'min'
+    print '----------------------------------------------------------'
+
 ob.close()        
 
 header = """<?xml version="1.0" encoding="UTF-8"?>
