@@ -2,6 +2,8 @@
 import sgps.frames
 
 
+current_time = None
+
 def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
     
@@ -11,13 +13,15 @@ def array2uint16(a):
 bin = open('data.bin','r');
 
 def generate_object(f):
-    print f
+    #print f
+    global current_time
     if f[0] == 0x01:
-        return sgps.frames.Time(f[1:])
+        current_time = sgps.frames.Time(f[1:])
+        return current_time
     elif f[0] == 0x02:
-        return sgps.frames.Position(f[1:])
+        return sgps.frames.Position(f[1:],current_time)
     elif f[0] == 0x03:
-        return sgps.frames.System(f[1:])
+        return sgps.frames.System(f[1:],current_time)
     else:
         return sgps.frames.Unknown(f)
 
@@ -63,13 +67,6 @@ while data_in:
     
 bin.close()
 
-kml = ''
-for x in data:
-    #print x.description()
-    if x.frame_id == 0x02:
-        kml += x.kml(150)
-        kml += ' ' 
-
 
 
 header = """<?xml version="1.0" encoding="UTF-8"?>
@@ -112,7 +109,39 @@ footer = """
 </kml>
 """
 
-print header,kml,footer
+new_track = """
+            </coordinates>
+		</LineString>
+	</Placemark>
+    <Placemark>
+		<styleUrl>#line</styleUrl>
+		<LineString>
+			<coordinates>
+"""
+
+
+tracks = [[]]
+
+kml = ''
+for x in data:
+    #print x.description()
+    if x.frame_id == 0x03:  # system
+        if x.msg == 0x11:   # new track
+            #kml += new_track
+            tracks.append([])
+    if x.frame_id == 0x02:
+        tracks[-1].append(x)
+        #kml += x.kml(150)
+        #kml += ' ' 
+
+for track in tracks:
+    #print track
+    if track: 
+        kml += new_track
+        for pos in track:
+            kml += pos.kml(150)+' '
+
+print tracks
 f = open('out.kml','w')
 f.write(header+kml+footer)
 f.close()

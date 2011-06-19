@@ -37,10 +37,7 @@ def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
     
 def array2uint16(a):
-    try:
-        return a[0]*0x100 + a[1]
-    except:
-        print a
+    return a[0]*0x100 + a[1]
 s = serial.Serial('/dev/tty.usbserial-A5UBS4UK',115200,timeout=1)
 #('/dev/tty.usbserial-A5004Gk9',115200)
 
