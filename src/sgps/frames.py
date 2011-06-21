@@ -2,10 +2,12 @@ import datetime
 
 def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
-  
+
+
 def array2uint24(a):
     return a[0]*0x10000 + a[1]*0x100 + a[2] 
-    
+
+
 def array2uint16(a):
     return a[0]*0x100 + a[1]
     
@@ -73,6 +75,19 @@ class Position(SGPSObject):
     def kml(self, max_error=100000):
         if self.h_error < max_error and self.lat and self.lon:
             return '%f,%f,%d' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
+        return ''
+
+    def kml_gxcoord(self, max_error=100000):
+        if self.h_error < max_error and self.lat and self.lon:
+            coords = u'<gx:coord>%f %f %d</gx:coord>' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
+            return coords
+        return ''
+
+    def kml_when(self, max_error=100000):
+        if self.h_error < max_error and self.lat and self.lon:
+            print self.timestamp
+            return u'<when>%s</when>' % (self.timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'))
+            #return u'<when>2010-05-28T02:02:09Z</when>'
         return ''
         
 class System(SGPSObject):
