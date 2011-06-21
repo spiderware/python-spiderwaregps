@@ -1,5 +1,5 @@
 from .parser import parse
-from .frames import registry
+from .frames import registry, Position, System, Unknown
 
 def generate_frame_object(frame, frame_types=None):
     frame_types = frame_types or registry
@@ -14,17 +14,34 @@ class SpiderwareGPS(object):
     def __init__(self, raw_frames, frame_types=None):
         self.frame_types = frame_types or registry
         self.frames = []
-        self.latest_time_entry = None
-        current_time = None
+        current_time_entry = None
         for raw_frame in raw_frames:
             obj = generate_frame_object(
                         frame=raw_frame,
                         frame_types=self.frame_types)
             if isinstance(obj, self.frame_types.time):
-                self.latest_time_entry = obj
+                current_time_entry = obj
             else:
-                obj.timestamp = self.latest_time_entry.timestamp
+                obj.timestamp = current_time_entry.timestamp
                 self.frames.append(obj)
+
+    def filtered_frames(self, types):
+        for item in self.frames:
+            if item.__class__ in types:
+                yield item
+
+    @property
+    def positions(self):
+        return self.filtered_frames([Position])
+
+    @property
+    def system_messages(self):
+        return self.filtered_frames([System])
+
+    @property
+    def unknown_frames(self):
+        return self.filtered_frames([Unknown])
+    
 
     @classmethod
     def from_file(cls, file):
