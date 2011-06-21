@@ -28,50 +28,45 @@ class Time(SGPSObject):
     def __init__(self, data):
         self.week = array2uint16(data[0:2])
         self.tow = array2uint24(data[2:5])
-        print self.week,self.tow
-        #print datetime.timedelta(weeks=self.weeks)
         self.timestamp = gpstime2datetime(self.week,self.tow)
         
-    def description(self):
+    def __repr__(self):
         h = self.tow/60
         m = (self.tow-h*60)/3600
         s = self.tow-h*60-m*3600
-        return '<Time %d:%d:%d>'%(h,m,s)
+        return '<%s %d:%d:%d>' % (self.__class__.__name__, h,m,s)
         
-    def get_timestamp(self,offset=0):
+    def get_timestamp(self, offset=0):
         return self.timestamp + datetime.timedelta(seconds=offset)
         
 class Position(SGPSObject):
     frame_id = 0x02
-    offset = 0
-    lat = 0.0
-    lon = 0.0
-    alt = 0
-    v_error = 0
-    h_error = 0
-    flags = 0
-    
-    def __init__(self, data, time):
-        self.offset  = array2uint16(data[0:2])   
-        self.timestamp = time.get_timestamp(self.offset)
-        self.lat = array2uint32(data[2:6])   
-        self.lon = array2uint32(data[6:10]) 
-        self.alt = array2uint16(data[10:12])    
-        self.h_error = data[12]   
-        #print h_error 
+
+    def __init__(self, data):
+        self.timestamp = None
+        self.offset  = array2uint16(data[0:2])
+        self.lat = array2uint32(data[2:6])
+        self.lon = array2uint32(data[6:10])
+        self.alt = array2uint16(data[10:12])
+        self.h_error = data[12]
         self.v_error = data[13]
         self.flags =   data[14]
-        #print h
         if self.lat > 0x7fffffff:
             self.lat = -0x7fffffff+self.lat 
         if self.lon > 0x7fffffff:
             self.lon = -0x7fffffff+self.lon 
         if self.alt > 0x7fff:
             self.alt = -0x7fff+self.alt
-    
-    def description(self):
-        return '<Position %f / %f (+/- %dm) \t%dm (+/- %dm)>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error)
-    
+
+    def __repr__(self):
+        return '<%s %f / %f (+/- %dm) \t%dm (+/- %dm)>' % (
+                    self.__class__.__name__,
+                    float(self.lat)/10000000,
+                    float(self.lon)/10000000,
+                    self.h_error,
+                    self.alt,
+                    self.v_error)
+
     def kml(self, max_error=100000):
         if self.h_error < max_error and self.lat and self.lon:
             return '%f,%f,%d' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
@@ -92,32 +87,45 @@ class Position(SGPSObject):
         
 class System(SGPSObject):
     frame_id = 0x03
-    msg = 0
-    rfu = 0
-    offset = 0
-    
-    def __init__(self, data, time_frame=0):
+
+    def __init__(self, data):
+        self.timestamp = None
         self.offset  = array2uint16(data[0:2])   
-        self.timestamp = time_frame.get_timestamp(self.offset)
-        self.msg = data[2]   
+        self.msg = data[2]
         self.rfu = data[3]
-        
-    def description(self):
-        return '<System %d, %d>'%(self.msg,self.rfu)
-    
-    
+
+    def __repr__(self):
+        return '<%s %d, %d (%s)>' % (
+            self.__class__.__name__,
+            self.msg, self.rfu,
+            self.timestamp)
+
+
 class Unknown(SGPSObject):
-    frame_id = 0xff
+#    frame_id = 0xff
     data = []
     rfu = 0
-    
-    def __init__(self, data):
-        self.data = data 
-        
-    def description(self):
-        s = '<Unknown'
-        for x in self.data:
-            s += ' %x' % x
-        s += '>'
+
+    def __init__(self, frame_id, data):
+        self.timestamp = None
+        self.frame_id = frame_id
+        self.data = data
+
+    def __repr__(self):
+        s = '<Unknown %s %s (%s)>' % (
+            self.frame_id,
+            " ".join(["%x" % x for x in self.data]),
+            self.timestamp,
+        )
         return s
-    
+
+class FrameRegistry(dict):
+    time = Time
+    unknown = Unknown
+
+    def register(self, FrameClass):
+        self[FrameClass.frame_id] = FrameClass
+
+registry = FrameRegistry()
+registry.register(Position)
+registry.register(System)
