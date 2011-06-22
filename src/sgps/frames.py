@@ -23,8 +23,7 @@ class Time(SGPSObject):
     frame_id = 0x01
     tow = 0
     week = 0
-    
-    
+
     def __init__(self, data):
         self.week = array2uint16(data[0:2])
         self.tow = array2uint24(data[2:5])
@@ -35,7 +34,10 @@ class Time(SGPSObject):
         m = (self.tow-h*60)/3600
         s = self.tow-h*60-m*3600
         return '<%s %d:%d:%d>' % (self.__class__.__name__, h,m,s)
-        
+
+    def is_valid(self):
+        return True
+
     def get_timestamp(self, offset=0):
         return self.timestamp + datetime.timedelta(seconds=offset)
         
@@ -66,6 +68,11 @@ class Position(SGPSObject):
                     self.h_error,
                     self.alt,
                     self.v_error)
+
+    def is_valid(self):
+        if not self.lat or not self.lon or not self.alt:
+            return False
+        return True
 
     def kml(self, max_error=100000):
         if self.h_error < max_error and self.lat and self.lon:
@@ -121,6 +128,8 @@ class System(SGPSObject):
             message,
             self.timestamp)
 
+    def is_valid(self):
+        return True
 
 class Unknown(SGPSObject):
 #    frame_id = 0xff
@@ -139,6 +148,9 @@ class Unknown(SGPSObject):
             self.timestamp,
         )
         return s
+
+    def is_valid(self):
+        return True
 
 class FrameRegistry(dict):
     time = Time
