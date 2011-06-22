@@ -9,6 +9,7 @@ def read(fname):
 
 install_requires = [
     'setuptools',
+    'lxml',
 ]
 
 setup(
@@ -21,10 +22,11 @@ setup(
     long_description = read('README.rst'),
     author = 'Stefan Foulis',
     author_email = 'stefan.foulis@gmail.com',
-    packages=find_packages('src'),
+    package_dir = {'': 'src'},
+    packages = ['sgps','sgps.export'],
     install_requires = install_requires,
-    include_package_data=True,
-    zip_safe=False,
+    include_package_data = False,
+    zip_safe = False,
     classifiers = [
     ]
 )
