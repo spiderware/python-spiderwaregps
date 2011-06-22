@@ -87,17 +87,38 @@ class Position(SGPSObject):
         
 class System(SGPSObject):
     frame_id = 0x03
-
+    states = {
+        0: 'error code %(rfu)s',
+        1: 'startup',
+        2: 'standby',
+        3: 'wake up',
+        4: 'break begins',
+        5: 'break ends *',
+        6: 'gps on *',
+        7: 'gps off *',
+        8: 'battery low (%(rfu)s%)',
+        9: 'charging (%(rfu)s%)',
+        10: 'charging ends',
+        11: 'wall power on',
+        12: 'wall power off',
+        13: 'changed profile to %(rfu)s',
+        14: 'waypoint %(rfu)s',
+        15: 'accelerometer off',
+        16: 'accelerometer on',
+        17: 'new track begins',
+    }
     def __init__(self, data):
         self.timestamp = None
-        self.offset  = array2uint16(data[0:2])   
+        self.offset  = array2uint16(data[0:2])
         self.msg = data[2]
         self.rfu = data[3]
 
     def __repr__(self):
-        return '<%s %d, %d (%s)>' % (
+        str = self.states.get(self.msg, 'unknown state %(state_id)s, RFU=%(rfu)s')
+        message = str % {'state_id': self.msg, 'rfu': self.rfu}
+        return '<%s %s (%s)>' % (
             self.__class__.__name__,
-            self.msg, self.rfu,
+            message,
             self.timestamp)
 
 
