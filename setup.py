@@ -13,11 +13,11 @@ install_requires = [
 ]
 
 setup(
-    name = "pyhton-spiderwaregps",
+    name = "spiderwaregps",
     version = version,
     url = 'http://github.com/spiderware/pyhton-spiderwaregps',
     license = 'BSD',
-    platforms=['OS Independent'],
+    platforms = ['OS Independent'],
     description = "A converter for the custom binary format of the spiderware gps tracker.",
     long_description = read('README.rst'),
     author = 'Stefan Foulis',
