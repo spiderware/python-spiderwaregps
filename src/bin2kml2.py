@@ -231,9 +231,10 @@ for track in tracks:
             kml_when += pos.kml_when(150)+' '
         for pos in track:
             kml_coord += pos.kml_gxcoord(150)+' '
-        kml += (track_template % {'name': u'Trip starting at %s' % track[0].timestamp,
-                                 'when': kml_when,
-                                 'coord': kml_coord,})
+        kml += (track_template % {
+                        'name': u'Trip starting at %s' % track[0].timestamp,
+                        'when': kml_when,
+                        'coord': kml_coord,})
 
 print tracks
 f = open('out.kml','w')
