@@ -1,4 +1,4 @@
-
+13
 # THIS SCRIPT IS NOT FOR PUBLIC USE, IT TESTS THE CURRENT VERSION OF GPS HARDWARE (NOT RELEASED YET)
 # TODO:
 # - seperate read and file generation process in classes
@@ -23,7 +23,38 @@
 # markus dot hutzler at spiderware dot ch
 
 
-import serial,sys
+#! /usr/bin/env python
+"""\
+    Scan for serial ports. Linux specific variant that also includes USB/Serial
+    adapters.
+    
+    Part of pySerial (http://pyserial.sf.net)
+    (C) 2009 <cliechti@gmx.net>
+    """
+
+import sys
+import os
+import serial
+import glob
+
+def scan():
+    """scan for available ports. return a list of device names."""
+    return glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*') + glob.glob('/dev/tty.*')
+
+
+def scan_win():
+    """scan for available ports. return a list of tuples (num, name)"""
+    available = []
+    for i in range(256):
+        try:
+            s = serial.Serial(i)
+            available.append( (i, s.portstr))
+            s.close()   # explicit close cause of delayed GC in java
+        except serial.SerialException:
+            pass
+    print available
+    return available
+
 
 
 def f2sf(f):
@@ -38,67 +69,158 @@ def array2uint32(a):
     
 def array2uint16(a):
     return a[0]*0x100 + a[1]
-s = serial.Serial('/dev/tty.usbserial-A5UBS4UK',115200,timeout=1)
-#('/dev/tty.usbserial-A5004Gk9',115200)
 
 
 
-s.write('mg\n') # memory get command
-escape = False
-data_in = True
-data = []
-frame = []
-time_on = 0
-time_off = 0
-time_n = 0
-cycle_cnt = 0
-c = ' '
-bin = open('data.bin','w');
-
-x = 0
-byte = 0
-while data_in:
-    try:
-        byte = int(s.read(2),16)
-    except:
-        print byte    
-        break
-    bin.write(chr(byte))
-    x+=1
+def read_bin():
+    s.write('mg\n') # memory get command
+    s.flushInput()
+    escape = False
+    data_in = True
+    data = []
+    frame = []
+    time_on = 0
+    time_off = 0
+    time_n = 0
+    cycle_cnt = 0
+    c = ' '
+    bin = open('data.bin','w');
     
-    if byte == 0x7e and escape:
-        frame.append(byte)
-        escape = False
-        print 'escape 0x7e'
-
-    elif byte == 0x7e:
-        # start escape
-        escape = True
-           
-    elif byte == 0x7f and escape:
-        # escape FF
-        frame.append(0xFF)   
-        escape = False 
-        print 'escape 0xFF'
-
-    elif escape:
-        #print new frame
-        if not frame == []:
-            data.append(frame)
-        frame = [byte]
-        escape = False
+    x = 0
+    byte = 0
+    while data_in:
+        try:
+            byte = int(s.read(2),16)
+        except:
+            print byte    
+            break
+        bin.write(chr(byte))
+        x+=1
         
-    else:
-        if byte == 0xff:
-            data_in = False
-            data.append(frame)
-        else:
-            #print hex(byte)
+        if byte == 0x7e and escape:
             frame.append(byte)
+            escape = False
+            #print 'escape 0x7e'
     
-bin.close()
+        elif byte == 0x7e:
+            # start escape
+            escape = True
+               
+        elif byte == 0x7f and escape:
+            # escape FF
+            frame.append(0xFF)   
+            escape = False 
+            #print 'escape 0xFF'
+    
+        elif escape:
+            #print new frame
+            if not frame == []:
+                data.append(frame)
+            frame = [byte]
+            escape = False
+            
+        else:
+            if byte == 0xff:
+                data_in = False
+                data.append(frame)
+            else:
+                #print hex(byte)
+                frame.append(byte)
+        
+    bin.close()
+
+
+
+if __name__=='__main__':
+    port_selected = False
+    
+    while not port_selected:
+        print "Found ports:"
+        ind = 1
+        if os.name == 'nt':
+            devlist = scan_win()
+        else:
+            devlist = scan()
+        for name in devlist:
+            print ind, name
+            ind+=1
+        sys.stdout.write('choose port [1..%i]: '%(ind-1))
+        answer = sys.stdin.readline()
+        
+        try:
+            answer = int(answer.strip())
+        except ValueError:
+            print 'Please enter a correct value!'
+        try:
+            port = devlist[answer-1]
+            port_selected = True
+        except IndexError:
+            print 'Please enter a correct value!'
+    print 'selected port:', port
+
+    # if windows
+    if os.name == 'nt':
+        s = serial.Serial(port[0],115200,timeout=1)
+
+    # if linux
+    else:
+        s = serial.Serial(port,115200,timeout=1)
+
+
+    if s:
+        print 'port opend.',
+    while not answer == 'q':    
+        print 'What do you want to do?'
+        print 'rb: read data and save as binary'
+        print 'mem: get current memory status'
+        print 'erase: get current memory status'
+        print 'kml: save data as kml-file'
+        print 'q: exit program'
+        sys.stdout.write('> ')
+        answer = sys.stdin.readline()
+        answer = answer.strip()
+    
+        if answer == 'mem':
+            s.write('mp\n')
+            s.flushInput()
+            d = ''
+            c = ''
+            while not c == '\n':
+                c = s.read(1)
+                d += c
+            status = int(d[:8],16)
+            print status/1024,'kByte, (',float(status)/(1024*1024)*100,'%)'
+                
+        if answer == 'rb':
+            print 'reading...',
+            read_bin()
+            print 'DONE. (saved as data.bin)'
+            """
+            s.flush()
+            s.write('mg\n')
+            while 1:
+                sys.stdout.write( s.read(1) )
+            """
+            
+        if answer == 'erase':
+            print 'erasing...',
+            s.write('me\n')
+            print 'DONE.'
+            
+    # done
+    s.close()
+    print 'bye bye'
+        
+exit (0)
+
+
+
     
 #print data
+
+
+
+exit(0)
 
 print 'len:',len(data)
 ob = open('bat.csv','wb')
