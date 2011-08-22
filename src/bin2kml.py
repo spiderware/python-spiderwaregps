@@ -18,7 +18,7 @@ def generate_object(f):
     if f[0] == 0x01:
         current_time = sgps.frames.Time(f[1:])
         return current_time
-    elif f[0] == 0x02:
+    elif f[0] == 0x02 and len(f[1:]) == 15:
         return sgps.frames.Position(f[1:],current_time)
     elif f[0] == 0x03:
         return sgps.frames.System(f[1:],current_time)
@@ -139,7 +139,7 @@ for track in tracks:
     if track: 
         kml += new_track
         for pos in track:
-            kml += pos.kml(150)+' '
+            kml += pos.kml(80)+' '
 
 print tracks
 f = open('out.kml','w')

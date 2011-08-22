@@ -7,6 +7,7 @@ def array2uint24(a):
     return a[0]*0x10000 + a[1]*0x100 + a[2] 
     
 def array2uint16(a):
+    #print a
     return a[0]*0x100 + a[1]
     
     
@@ -60,12 +61,18 @@ class Position(SGPSObject):
         self.v_error = data[13]
         self.flags =   data[14]
         #print h
-        if self.lat > 0x7fffffff:
-            self.lat = -0x7fffffff+self.lat 
-        if self.lon > 0x7fffffff:
-            self.lon = -0x7fffffff+self.lon 
-        if self.alt > 0x7fff:
-            self.alt = -0x7fff+self.alt
+        
+
+
+        #ERRRRRRRORRRRRRRRRRR
+        
+        if(self.lat & 0x80000000):
+            self.lat = -0x100000000 + self.lat
+        if(self.lon & 0x80000000):
+            self.lon = -0x100000000 + self.lon
+        if(self.alt & 0x8000):
+            self.alt = -0x10000 + self.alt
+    
     
     def description(self):
         return '<Position %f / %f (+/- %dm) \t%dm (+/- %dm)>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error)
