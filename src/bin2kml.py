@@ -1,5 +1,10 @@
 #convert
 import sgps.frames
+import sgps.data
+import datetime
+
+
+break_to_new_track_time = 3600 #1h
 
 
 current_time = None
@@ -31,12 +36,14 @@ escape = 0
 data_in = 1
 data=[]
 frame = []
+escaped = False
 while data_in:
     byte = ord(bin.read(1))
     
     if byte == 0x7e and escape:
         frame.append(byte)
         escape = False
+        escaped = True
         print 'escape 0x7e'
 
     elif byte == 0x7e:
@@ -47,12 +54,16 @@ while data_in:
         # escape FF
         frame.append(0xFF)   
         escape = False 
+        escaped = True
         print 'escape 0xFF'
 
     elif escape:
         #print new frame
         if len(frame) > 0:
-            data.append(generate_object(frame))
+            obj = generate_object(frame)
+            obj.escaped = escaped
+            escaped = False
+            data.append(obj)
             
         frame = [byte]
         escape = False
@@ -68,63 +79,274 @@ while data_in:
 bin.close()
 
 
+def kml_break(time):
+    return ''
+
 
 header = """<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
 <Document>
-	<name>test.kmz</name>
-	<description><![CDATA[<h3></h3><b><i></i></b><br><p></p><br><p></p>]]></description>
-	<Style id="line">
-		<LineStyle>
-			<color>7f0000ff</color>
-			<width>4</width>
-		</LineStyle>
-	</Style>
-	<Placemark>
-		<styleUrl>#line</styleUrl>
-		<LineString>
-			<coordinates>
+    <name>Tracks.kml</name>
+    <Style id="sn_coffee">
+        <IconStyle>
+            <scale>0.5</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/shapes/coffee.png</href>
+            </Icon>
+            <hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/>
+        </IconStyle>
+        <LabelStyle>
+            <scale>0.5</scale>
+        </LabelStyle>
+        <ListStyle>
+        </ListStyle>
+    </Style>
+    <StyleMap id="msn_ylw-pushpin">
+        <Pair>
+            <key>normal</key>
+            <styleUrl>#sn_ylw-pushpin0</styleUrl>
+        </Pair>
+        <Pair>
+            <key>highlight</key>
+            <styleUrl>#sh_ylw-pushpin</styleUrl>
+        </Pair>
+    </StyleMap>
+    <StyleMap id="msn_ylw-pushpin0">
+        <Pair>
+            <key>normal</key>
+            <styleUrl>#sn_ylw-pushpin</styleUrl>
+        </Pair>
+        <Pair>
+            <key>highlight</key>
+            <styleUrl>#sh_ylw-pushpin0</styleUrl>
+        </Pair>
+    </StyleMap>
+    <Style id="sn_ylw-pushpin">
+        <IconStyle>
+            <scale>0.5</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+            </Icon>
+            <hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+        </IconStyle>
+        <LabelStyle>
+            <scale>0.5</scale>
+        </LabelStyle>
+    </Style>
+    <Style id="sh_ylw-pushpin">
+        <IconStyle>
+            <scale>1.3</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+            </Icon>
+            <hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+        </IconStyle>
+    </Style>
+    <StyleMap id="msn_coffee">
+        <Pair>
+            <key>normal</key>
+            <styleUrl>#sn_coffee</styleUrl>
+        </Pair>
+        <Pair>
+            <key>highlight</key>
+            <styleUrl>#sh_coffee</styleUrl>
+        </Pair>
+    </StyleMap>
+    <Style id="sh_coffee">
+        <IconStyle>
+            <scale>0.583333</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/shapes/coffee.png</href>
+            </Icon>
+            <hotSpot x="0.5" y="0" xunits="fraction" yunits="fraction"/>
+        </IconStyle>
+        <LabelStyle>
+            <scale>0.5</scale>
+        </LabelStyle>
+        <ListStyle>
+        </ListStyle>
+    </Style>
+    <Style id="sh_ylw-pushpin0">
+        <IconStyle>
+            <scale>0.590909</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+            </Icon>
+            <hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+        </IconStyle>
+        <LabelStyle>
+            <scale>0.5</scale>
+        </LabelStyle>
+    </Style>
+    <Style id="sn_ylw-pushpin0">
+        <IconStyle>
+            <scale>1.1</scale>
+            <Icon>
+                <href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+            </Icon>
+            <hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+        </IconStyle>
+    </Style>
+    <Style id="track_red">
+        <LineStyle>
+            <color>ff0000ff</color>
+            <width>2</width>
+        </LineStyle>
+    </Style>
+    <Style id="track_blue">
+        <LineStyle>
+            <color>ffff00ff</color>
+            <width>2</width>
+        </LineStyle>
+    </Style>
+    <Style id="track_green">
+        <LineStyle>
+            <color>ff00ffff</color>
+            <width>2</width>
+        </LineStyle>
+    </Style>
+    <Folder>
+        <name>Tracks</name>
+        <open>0</open>
             """
 
 
 
 footer = """
-			</coordinates>
-		</LineString>
-	</Placemark>
-	<Folder>
-		<name>Geolives</name>
-		<ScreenOverlay>
-			<name>Geolives</name>
-			<Icon>
-				<href>http://www.geolives.ch/flash/logobig.gif</href>
-			</Icon>
-			<overlayXY x="0" y="-1" xunits="fraction" yunits="fraction"/>
-			<screenXY x="0.01" y="0.02" xunits="fraction" yunits="fraction"/>
-			<rotationXY x="0" y="0" xunits="fraction" yunits="fraction"/>
-			<size x="0" y="0" xunits="fraction" yunits="fraction"/>
-		</ScreenOverlay>
-	</Folder>
+</Folder>
 </Document>
 </kml>
 """
 
-new_track = """
-            </coordinates>
-		</LineString>
-	</Placemark>
-    <Placemark>
-		<styleUrl>#line</styleUrl>
-		<LineString>
-			<coordinates>
-"""
+
+
+#compile frames to data
+compiled = []
+
+styles = ['track_red','track_green','track_blue']
+
+current_track = None
+current_point = None
+current_break = None
+break_track = False
+
+for x in data:
+    if break_track:
+        del current_track
+        current_track = None
+        break_track = False
+    if x.frame_id == 0x03:
+        if x.msg == 0x04:
+            #break
+            if not current_break:
+                current_break = sgps.data.Break(current_point)
+                current_break.timestamp = x.timestamp
+        if x.msg == 14 and current_track:
+            # add waypoint
+            waypoint = sgps.data.Waypoint(current_point)
+            waypoint.timestamp = x.timestamp
+            current_track.waypoints.append(waypoint)
+            #print waypoint.description()
+        if x.msg == 0x11:   # new track
+            del current_track
+            current_track = None
+            
+    if x.frame_id == 0x02:
+        #point
+        
+        #detect errors
+        if x.lat == 0 or x.lon == 0:
+            print 'ERROR 0', x.description()
+        elif x.h_error <= 1:
+            print 'ERROR 1a', x.description()
+        elif x.h_error > 1000:
+            print 'ERROR 1b', x.description()
+        elif x.alt == 0:
+            print 'ERROR 2', x.description()
+        else:
+            print x.timestamp,'\t',x.description()
+            #print 'OK', x.description()
+            current_point = sgps.data.Location(x.lon,x.lat,x.alt,x.h_error,x.v_error)
+            current_point.timestamp = x.timestamp
+            if not current_track:
+                current_track = sgps.data.Track()
+                compiled.append(current_track)
+                
+                #print "new track", 
+            # make break ends
+            if current_break:
+                current_break.end = current_point.timestamp
+                
+                if current_break.time().seconds > 60*60*5:    
+                    break_track = True
+                elif current_break.time().seconds > 60*3:
+                    # only show breaks bigger 3 min
+                    current_track.breaks.append(current_break)
+                #print current_break.description()
+                current_break = None
+            
+                
+            current_track.points.append(current_point)
+            
+kml = ''
+i = 0
+
+print compiled
+
+for track in compiled:
+    i+=1
+    kml += """
+    <Folder>
+            <name>Track %d</name>
+            <open>0</open>
+            <Placemark>
+                <name>Track %d</name>
+                <styleUrl>%s</styleUrl>
+                <LineString>
+                    <tessellate>1</tessellate>
+                    <coordinates>"""%(i,i,styles[i%3])
+    
+    for point in track.points:
+        #print '\t',point.description()
+        kml += point.kml(30)+' '
+    
+    kml += """        </coordinates>
+                </LineString>
+            </Placemark>
+            <Folder>
+                <name>Breaks</name>
+                <open>1</open>"""
+    
+        
+    for b in track.breaks:
+        #print '\t',b.description()
+        kml += b.kml()
+        
+        
+    kml += """</Folder>"""
+    
+    # waypoints here!!!!
+    
+    kml += """</Folder>"""
+    
+
+f = open('out2.kml','w')
+f.write(header+kml+footer)
+f.close()
+
+exit(0)
+
+
+
 
 
 tracks = [[]]
 
+
 kml = ''
 for x in data:
-    #print x.description()
+    if 1:# x.frame_id == 0xff or x.frame_id == 0x02:
+        print x.timestamp, x.description()
     if x.frame_id == 0x03:  # system
         if x.msg == 0x11:   # new track
             #kml += new_track
@@ -139,9 +361,9 @@ for track in tracks:
     if track: 
         kml += new_track
         for pos in track:
-            kml += pos.kml(80)+' '
+            kml += pos.kml()+' '
 
-print tracks
+#print tracks
 f = open('out.kml','w')
 f.write(header+kml+footer)
 f.close()

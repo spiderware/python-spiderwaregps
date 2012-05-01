@@ -72,7 +72,7 @@ def array2uint16(a):
 
 
 
-def read_bin():
+def read_bin(debug=False):
     s.write('mg\n') # memory get command
     s.flushInput()
     escape = False
@@ -89,8 +89,11 @@ def read_bin():
     x = 0
     byte = 0
     while data_in:
+        byte = s.read(2)
+        if debug:
+            sys.stdout.write(byte)
         try:
-            byte = int(s.read(2),16)
+            byte = int(byte,16)
         except:
             print byte    
             break
@@ -172,6 +175,7 @@ if __name__=='__main__':
     while not answer == 'q':    
         print 'What do you want to do?'
         print 'rb: read data and save as binary'
+        print 'rbd: read data and save as binary (debug mode)'
         print 'mem: get current memory status'
         print 'erase: get current memory status'
         print 'kml: save data as kml-file'
@@ -191,6 +195,10 @@ if __name__=='__main__':
             status = int(d[:8],16)
             print status/1024,'kByte, (',float(status)/(1024*1024)*100,'%)'
                 
+        if answer == 'rbd':
+            print 'reading...',
+            read_bin(debug=True)
+
         if answer == 'rb':
             print 'reading...',
             read_bin()

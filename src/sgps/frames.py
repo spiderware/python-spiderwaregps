@@ -1,5 +1,26 @@
 import datetime
 
+
+system_flags = ['error, RFU=error code',
+'start up',
+'stand by',
+'wake up',
+'break begins',
+'break ends *',
+'gps on *',
+'gps off *',
+'battery low , RFU=percent',
+'charging begins, RFU=percent',
+'charging ends',
+'wall power on',
+'wall power off',
+'changed profile, RFU=id',
+'waypoint, RFU=id',
+'accelerometer off',
+'accelerometer on',
+'new track begins','18','19','20','21','22','23','','','','','','','','',]
+
+
 def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
   
@@ -16,6 +37,8 @@ def gpstime2datetime(weeks,tow):
 
 
 class SGPSObject(object):
+    timestamp = 0
+    escaped = False
     pass
 
 class Time(SGPSObject):
@@ -27,7 +50,7 @@ class Time(SGPSObject):
     def __init__(self, data):
         self.week = array2uint16(data[0:2])
         self.tow = array2uint24(data[2:5])
-        print self.week,self.tow
+        #print self.week,self.tow
         #print datetime.timedelta(weeks=self.weeks)
         self.timestamp = gpstime2datetime(self.week,self.tow)
         
@@ -49,8 +72,10 @@ class Position(SGPSObject):
     v_error = 0
     h_error = 0
     flags = 0
+    data = []
     
     def __init__(self, data, time):
+        self.data = data
         self.offset  = array2uint16(data[0:2])   
         self.timestamp = time.get_timestamp(self.offset)
         self.lat = array2uint32(data[2:6])   
@@ -75,7 +100,10 @@ class Position(SGPSObject):
     
     
     def description(self):
-        return '<Position %f / %f (+/- %dm) \t%dm (+/- %dm)>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error)
+        s = '<Position '+str(len(self.data))+'\t'+str(self.escaped)+'\t'
+        for x in self.data:
+            s += ' %.2x' % x
+        return s+' %f / %f (+/- %dm) \t%dm (+/- %dm) escaped: %s>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error,str(self.escaped))
     
     def kml(self, max_error=100000):
         if self.h_error < max_error and self.lat and self.lon:
@@ -95,7 +123,11 @@ class System(SGPSObject):
         self.rfu = data[3]
         
     def description(self):
-        return '<System %d, %d>'%(self.msg,self.rfu)
+        #print self.msg
+        return '<System %s, %d, escaped: %s>'%(system_flags[self.msg],self.rfu,str(self.escaped))
+    
+    
+    
     
     
 class Unknown(SGPSObject):
@@ -107,9 +139,13 @@ class Unknown(SGPSObject):
         self.data = data 
         
     def description(self):
-        s = '<Unknown'
+        s = '<Unknown  '+str(len(self.data))+'\t'+str(self.escaped)+'\t'
         for x in self.data:
-            s += ' %x' % x
+            s += ' %.2x' % x
         s += '>'
         return s
+
+
+
+
     
