@@ -58,7 +58,9 @@ class Time(SGPSObject):
         h = self.tow/60
         m = (self.tow-h*60)/3600
         s = self.tow-h*60-m*3600
-        return '<Time %d:%d:%d>'%(h,m,s)
+        
+        return '<Time %s>'%self.timestamp
+    
         
     def get_timestamp(self,offset=0):
         return self.timestamp + datetime.timedelta(seconds=offset)
@@ -100,10 +102,10 @@ class Position(SGPSObject):
     
     
     def description(self):
-        s = '<Position '+str(len(self.data))+'\t'+str(self.escaped)+'\t'
+        s = '<Position len='+str(len(self.data))+' ['
         for x in self.data:
             s += ' %.2x' % x
-        return s+' %f / %f (+/- %dm) \t%dm (+/- %dm) escaped: %s>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error,str(self.escaped))
+        return s+' ] lat=%f lon=%f (+/- %dm) alt=%dm (+/- %dm) escaped: %s ts=%s>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error,str(self.escaped),self.timestamp)
     
     def kml(self, max_error=100000):
         if self.h_error < max_error and self.lat and self.lon:
@@ -124,7 +126,7 @@ class System(SGPSObject):
         
     def description(self):
         #print self.msg
-        return '<System %s, %d, escaped: %s>'%(system_flags[self.msg],self.rfu,str(self.escaped))
+        return '<System msg="%s", refu=%d, escaped: %s ts=%s>'%(system_flags[self.msg],self.rfu,str(self.escaped),self.timestamp)
     
     
     
