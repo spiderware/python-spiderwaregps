@@ -1,34 +1,56 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#    This file is part of spiderwareGPS.
+#    
+#    pygEDA is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    spiderwareGPS is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with spiderwareGPS.  If not, see <http://www.gnu.org/licenses/>.
+#
+#    Copyright 2012 Markus Hutzler, spiderware gmbh
+
 import datetime
 
+system_flags = ['error',
+                'start up',
+                'stand by',
+                'wake up',
+                'break begins',
+                'break ends',
+                'gps on',
+                'gps off',
+                'battery low',
+                'charging begins',
+                'charging ends',
+                'wall power on',
+                'wall power off',
+                'changed profile',
+                'waypoint',
+                'accelerometer off',
+                'accelerometer on',
+                'new track begins','18','19','20','21','22','23','','','','','','','','',
+                ]
 
-system_flags = ['error, RFU=error code',
-'start up',
-'stand by',
-'wake up',
-'break begins',
-'break ends *',
-'gps on *',
-'gps off *',
-'battery low , RFU=percent',
-'charging begins, RFU=percent',
-'charging ends',
-'wall power on',
-'wall power off',
-'changed profile, RFU=id',
-'waypoint, RFU=id',
-'accelerometer off',
-'accelerometer on',
-'new track begins','18','19','20','21','22','23','','','','','','','','',]
 
-
+#TODO: this is not an elegant way to do it. Make it better! 
 def array2uint32(a):
     return a[0]*0x1000000 + a[1]*0x10000 + a[2]*0x100 + a[3] 
-  
+
+#TODO: this is not an elegant way to do it. Make it better! 
 def array2uint24(a):
-    return a[0]*0x10000 + a[1]*0x100 + a[2] 
+    return a[0]*0x10000 + a[1]*0x100 + a[2]  
     
+#TODO: this is not an elegant way to do it. Make it better! 
 def array2uint16(a):
-    #print a
     return a[0]*0x100 + a[1]
     
     
@@ -50,17 +72,13 @@ class Time(SGPSObject):
     def __init__(self, data):
         self.week = array2uint16(data[0:2])
         self.tow = array2uint24(data[2:5])
-        #print self.week,self.tow
-        #print datetime.timedelta(weeks=self.weeks)
         self.timestamp = gpstime2datetime(self.week,self.tow)
         
     def description(self):
         h = self.tow/60
         m = (self.tow-h*60)/3600
         s = self.tow-h*60-m*3600
-        
         return '<Time %s>'%self.timestamp
-    
         
     def get_timestamp(self,offset=0):
         return self.timestamp + datetime.timedelta(seconds=offset)
@@ -78,20 +96,16 @@ class Position(SGPSObject):
     
     def __init__(self, data, time):
         self.data = data
-        self.offset  = array2uint16(data[0:2])   
-        self.timestamp = time.get_timestamp(self.offset)
+        self.offset  = array2uint16(data[0:2]) 
+        if time:  
+            self.timestamp = time.get_timestamp(self.offset)
+        
         self.lat = array2uint32(data[2:6])   
         self.lon = array2uint32(data[6:10]) 
         self.alt = array2uint16(data[10:12])    
         self.h_error = data[12]   
-        #print h_error 
         self.v_error = data[13]
         self.flags =   data[14]
-        #print h
-        
-
-
-        #ERRRRRRRORRRRRRRRRRR
         
         if(self.lat & 0x80000000):
             self.lat = -0x100000000 + self.lat
@@ -102,14 +116,14 @@ class Position(SGPSObject):
     
     
     def description(self):
-        s = '<Position len='+str(len(self.data))+' ['
-        for x in self.data:
-            s += ' %.2x' % x
-        return s+' ] lat=%f lon=%f (+/- %dm) alt=%dm (+/- %dm) escaped: %s ts=%s>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error,str(self.escaped),self.timestamp)
+        s = '<%s (+%ds)\t'%(self.timestamp, self.offset)
+        s += 'Position'
+        return s+' lat=%f lon=%f (+/- %dm) alt=%dm (+/- %dm) escaped: %s>'%(float(self.lat)/10000000,float(self.lon)/10000000,self.h_error,self.alt,self.v_error,str(self.escaped))
     
     def kml(self, max_error=100000):
+        #TODO: Better error handling needed
         if self.h_error < max_error and self.lat and self.lon:
-            return '%f,%f,%d' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
+            return '%f,%f,%d ' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
         return ''
         
 class System(SGPSObject):
@@ -119,18 +133,16 @@ class System(SGPSObject):
     offset = 0
     
     def __init__(self, data, time_frame=0):
-        self.offset  = array2uint16(data[0:2])   
-        self.timestamp = time_frame.get_timestamp(self.offset)
+        self.offset  = array2uint16(data[0:2]) 
+        if time_frame:
+            self.timestamp = time_frame.get_timestamp(self.offset)
         self.msg = data[2]   
         self.rfu = data[3]
         
     def description(self):
-        #print self.msg
-        return '<System msg="%s", refu=%d, escaped: %s ts=%s>'%(system_flags[self.msg],self.rfu,str(self.escaped),self.timestamp)
-    
-    
-    
-    
+        s = '<%s (+%ds)\t'%(self.timestamp, self.offset)
+        s += 'System msg="%s", refu=%d, escaped: %s>'%(system_flags[self.msg],self.rfu,str(self.escaped))
+        return s
     
 class Unknown(SGPSObject):
     frame_id = 0xff

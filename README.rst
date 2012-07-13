@@ -14,21 +14,23 @@ gps states
     2 stand by
     3 wake up 
     4 break begins
-    5 break ends *
+    5 break ends
     6 gps on *
     7 gps off *
-    8 battery low , RFU=percent
-    9 charging begins, RFU=percent
-    10 charging ends
-    11 wall power on
-    12 wall power off
+    8 battery low **
+    9 charging begins **
+    10 charging ends **
+    11 wall power on **
+    12 wall power off **
     13 changed profile, RFU=id
-    14 waypoint, RFU=id
+    14 waypoint
     15 accelerometer off
     16 accelerometer on
     17 new track begins
 
+RFU contains battery status by default  (x/2 percent)
 *) only used for debug
+**) not implemented yet
 
 data format
 ===========
@@ -39,13 +41,13 @@ data format
     escape: 0x7E 
     
     frame format:
-    0x7E [data] [next frame or 0xFF]
+    0x7E [data] | [next frame or 0xFF]
     
     escaped values
     0x7E -> 0x7E7E
     0xFF -> 0x7E7F
     
-    info frame
+    info frame **
     Type:       1 Byte (0x00)
     HW:         3 Byte | hardware version
     FW:         3 Byte | software version
@@ -73,9 +75,10 @@ data format
     state frame
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
-    State+RFU:n*2 Byte | sys info (state and custom data)
+    State:      1 Byte | sys info
+    RFU:        1 Byte | RFU (battery state by default)
                -------
-            n*2+3 Byte
+                5 Byte
     
     
     *1)  result = value & 0x7F
