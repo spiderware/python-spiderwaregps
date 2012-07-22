@@ -20,8 +20,7 @@
 
 import usb.core
 import usb.util
-import usb.backend.libusb01
-import time, sys
+import sys
 
 import sgps.decoder
 import sgps.frames
@@ -75,36 +74,29 @@ class WorldLogUSB():
         self.ep_OUT = conf[(0, 0)][0]
     
     def get_memory_state(self):
-        ret = []
         self.write([0x01])
         d = self.read(4)
-        print d
         ret = d[3]*0x1000000+d[2]*0x10000+d[1]*0x100+d[0]
         return ret
     
     def get_memory(self,start,len):
-        ret = []
         self.write([0x03,(start>>24)&0xff,(start>>16)&0xff,(start>>8)&0xff,start&0xff,len])
         return self.read(len)
         
     
     def erase_memory(self):
-        ret = []
         self.write([0x04])
         return
     
     def get_battery_status(self):
-        ret = []
         self.write([0x05])
         d = self.read(4)
-        print d
         vbat = float(d[1]*0x100+d[0])*78.125/1000000.0
         charge = float(d[3]*0x100+d[2])/256.0
         print vbat
         return (vbat,charge)
     
     def get_unique_id(self):
-        ret = []
         self.write([0x06])
         d = self.read(8)
         print d
@@ -112,7 +104,6 @@ class WorldLogUSB():
     
     
     def get_device_info(self):
-        ret = []
         self.write([0x07])
         d = self.read(8)
         print d
@@ -120,7 +111,6 @@ class WorldLogUSB():
         
     
     def get_device_state(self):
-        ret = []
         self.write([0x02])
         d = self.read(4)
         ret = d[3]*0x1000000+d[2]*0x10000+d[1]*0x100+d[0]
@@ -228,8 +218,8 @@ if __name__ == "__main__":
             data += d.get_memory(current,100)
             current += 100; 
     
-            decoder = sgps.decoder.Decoder()
-            decoder.decode(data)
+        decoder = sgps.decoder.Decoder()
+        decoder.decode(data)
         for frame in decoder.data:
             if frame.frame_id == 0x01:
                 color = bcolors.OKBLUE

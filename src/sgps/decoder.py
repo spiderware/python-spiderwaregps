@@ -28,8 +28,6 @@ class Decoder(object):
         self.current_time = None
         
     def generate_object(self,f):
-        #print f
-        global current_time
         if f[0] == 0x01:
             self.current_time = sgps.frames.Time(f[1:])
             return self.current_time

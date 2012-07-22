@@ -65,8 +65,8 @@ class SGPSObject(object):
 
 class Time(SGPSObject):
     frame_id = 0x01
-    tow = 0
-    week = 0
+    tow = 0  # time of week in seconds
+    week = 0  # week number since 1980-01-06
     
     
     def __init__(self, data):
@@ -75,9 +75,6 @@ class Time(SGPSObject):
         self.timestamp = gpstime2datetime(self.week,self.tow)
         
     def description(self):
-        h = self.tow/60
-        m = (self.tow-h*60)/3600
-        s = self.tow-h*60-m*3600
         return '<Time %s>'%self.timestamp
         
     def get_timestamp(self,offset=0):
@@ -85,7 +82,7 @@ class Time(SGPSObject):
         
 class Position(SGPSObject):
     frame_id = 0x02
-    offset = 0
+    offset = 0  # time since last timeframe (in seconds)
     lat = 0.0
     lon = 0.0
     alt = 0
@@ -93,6 +90,7 @@ class Position(SGPSObject):
     h_error = 0
     flags = 0
     data = []
+    timestamp = None
     
     def __init__(self, data, time):
         self.data = data
