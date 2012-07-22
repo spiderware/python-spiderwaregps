@@ -4,6 +4,16 @@ spiderware gps tracker binary format
 
 python-spiderwaregps is a library to decode and convert the custom binary tracking format of the spiderware gps tracker.
 
+
+Dependencies
+============
+
+python and system dependencies for OSX (using python from brew: not sure if that's relevant)::
+
+    pip install pyusb  # 1.0.0a2 at time of writing
+    brew install libusb
+
+
 GPS System Messages
 ==========
 
