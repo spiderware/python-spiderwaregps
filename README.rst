@@ -4,7 +4,7 @@ spiderware gps tracker binary format
 
 python-spiderwaregps is a library to decode and convert the custom binary tracking format of the spiderware gps tracker.
 
-gps states
+GPS System Messages
 ==========
 
 ::
@@ -15,24 +15,26 @@ gps states
     3 wake up 
     4 break begins
     5 break ends
-    6 gps on *
-    7 gps off *
-    8 battery low **
-    9 charging begins **
-    10 charging ends **
-    11 wall power on **
-    12 wall power off **
+    6 gps on (1)
+    7 gps off (1)
+    8 battery low (1,2)
+    9 charging begins (1,2)
+    10 charging ends (1,2)
+    11 wall power on (1,2)
+    12 wall power off (1,2)
     13 changed profile, RFU=id
     14 waypoint
     15 accelerometer off
     16 accelerometer on
     17 new track begins
 
-RFU contains battery status by default  (x/2 percent)
-*) only used for debug
-**) not implemented yet
+RFU contains battery status by default (x / 2  * percent)
 
-data format
+1) only used for debug
+
+2) not implemented yet
+
+Data Format
 ===========
 
 
@@ -72,10 +74,10 @@ data format
                -------
                16 Byte
     
-    state frame
+    system frame
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
-    State:      1 Byte | sys info
+    SYS:        1 Byte | system Message
     RFU:        1 Byte | RFU (battery state by default)
                -------
                 5 Byte
