@@ -21,6 +21,8 @@
 import usb.core
 import usb.util
 import sys
+import gpxpy
+import gpxpy.gpx
 
 import sgps.decoder
 import sgps.frames
@@ -212,7 +214,36 @@ if __name__ == "__main__":
         d.erase_memory()
         print 'erasing memory...'
         print 'MEM  : %.02f'%(float(d.get_memory_state())/1024),'kByte'
+
+    elif sys.argv[1] == 'save':
+        while current < mem:
+            data += d.get_memory(current,100)
+            current += 100; 
     
+        decoder = sgps.decoder.Decoder()
+        decoder.decode(data)
+        # Creating a new file:
+        # --------------------
+
+        gpx = gpxpy.gpx.GPX()
+
+        # Create first track in our GPX:
+        gpx_track = gpxpy.gpx.GPXTrack()
+        gpx.tracks.append(gpx_track)
+
+        # Create first segment in our GPX track:
+        gpx_segment = gpxpy.gpx.GPXTrackSegment()
+        gpx_track.segments.append(gpx_segment)
+
+        for frame in decoder.data:
+            gps_data = frame.gps_data()
+            if(gps_data != None):
+                gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(latitude=gps_data["latitude"], longitude=gps_data["longitude"], elevation=gps_data["elevation"],time=gps_data["timestamp"],horizontal_dilution=gps_data["horizontal_error"],vertical_dilution=gps_data["vertical_error"]))
+
+        with open(sys.argv[2], 'w') as f:
+            read_data = f.write(gpx.to_xml())
+            f.closed
+        
     elif sys.argv[1] == 'read':
         while current < mem:
             data += d.get_memory(current,100)

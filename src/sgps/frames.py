@@ -19,6 +19,7 @@
 #    Copyright 2012 Markus Hutzler, spiderware gmbh
 
 import datetime
+import time
 
 system_flags = ['error',
                 'start up',
@@ -62,6 +63,10 @@ class SGPSObject(object):
     timestamp = 0
     escaped = False
     pass
+
+    def gps_data(self):
+        return None
+    
 
 class Time(SGPSObject):
     frame_id = 0x01
@@ -123,6 +128,9 @@ class Position(SGPSObject):
         if self.h_error < max_error and self.lat and self.lon:
             return '%f,%f,%d ' % (float(self.lon)/10000000,float(self.lat)/10000000,self.alt)
         return ''
+    def gps_data(self):
+        return {"timestamp":self.timestamp,"latitude":float(self.lat)/10000000,"longitude":float(self.lon)/10000000,"elevation":self.alt,"horizontal_error":self.h_error,"vertical_error":self.v_error}
+    
         
 class System(SGPSObject):
     frame_id = 0x03
