@@ -32,9 +32,9 @@ class Decoder(object):
             self.current_time = sgps.frames.Time(f[1:])
             return self.current_time
         elif f[0] == 0x02 and len(f[1:]) == 15:
-            return sgps.frames.Position(f[1:],self.current_time)
+            return sgps.frames.Position(f[1:],self.current_time.get_timestamp())
         elif f[0] == 0x03:
-            return sgps.frames.System(f[1:],self.current_time)
+            return sgps.frames.System(f[1:],self.current_time.get_timestamp())
         else:
             return sgps.frames.Unknown(f)
 
