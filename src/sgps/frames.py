@@ -17,7 +17,9 @@ def gpstime2datetime(weeks,tow):
 
 
 class SGPSObject(object):
-    pass
+    def gps_data(self):
+        return None
+
 
 class Time(SGPSObject):
     frame_id = 0x01
@@ -44,8 +46,8 @@ class Time(SGPSObject):
 class Position(SGPSObject):
     frame_id = 0x02
 
-    def __init__(self, data):
-        self.timestamp = None
+    def __init__(self, data,timestamp):
+        self.timestamp = timestamp
         self.offset  = array2uint16(data[0:2])
         self.lat = array2uint32(data[2:6])
         self.lon = array2uint32(data[6:10])
@@ -91,6 +93,10 @@ class Position(SGPSObject):
             return u'<when>%s</when>' % (self.timestamp.strftime('%Y-%m-%dT%H:%M:%SZ'))
             #return u'<when>2010-05-28T02:02:09Z</when>'
         return ''
+
+    def gps_data(self):
+        return {"timestamp":self.timestamp,"latitude":float(self.lat)/10000000,"longitude":float(self.lon)/10000000,"elevation":self.alt,"horizontal_error":self.h_error,"vertical_error":self.v_error}
+    
         
 class System(SGPSObject):
     frame_id = 0x03
@@ -114,8 +120,8 @@ class System(SGPSObject):
         16: 'accelerometer on',
         17: 'new track begins',
     }
-    def __init__(self, data):
-        self.timestamp = None
+    def __init__(self, data,timestamp):
+        self.timestamp = timestamp
         self.offset  = array2uint16(data[0:2])
         self.msg = data[2]
         self.rfu = data[3]

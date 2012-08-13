@@ -4,7 +4,17 @@ spiderware gps tracker binary format
 
 python-spiderwaregps is a library to decode and convert the custom binary tracking format of the spiderware gps tracker.
 
-gps states
+
+Dependencies
+============
+
+python and system dependencies for OSX (using python from brew: not sure if that's relevant)::
+
+    pip install pyusb  # 1.0.0a2 at time of writing
+    brew install libusb
+
+
+GPS System Messages
 ==========
 
 ::
@@ -14,23 +24,27 @@ gps states
     2 stand by
     3 wake up 
     4 break begins
-    5 break ends *
-    6 gps on *
-    7 gps off *
-    8 battery low , RFU=percent
-    9 charging begins, RFU=percent
-    10 charging ends
-    11 wall power on
-    12 wall power off
+    5 break ends
+    6 gps on (1)
+    7 gps off (1)
+    8 battery low (1,2)
+    9 charging begins (1,2)
+    10 charging ends (1,2)
+    11 wall power on (1,2)
+    12 wall power off (1,2)
     13 changed profile, RFU=id
-    14 waypoint, RFU=id
+    14 waypoint
     15 accelerometer off
     16 accelerometer on
     17 new track begins
 
-*) only used for debug
+RFU contains battery status by default (x / 2  * percent)
 
-data format
+1) only used for debug
+
+2) not implemented yet
+
+Data Format
 ===========
 
 
@@ -39,13 +53,13 @@ data format
     escape: 0x7E 
     
     frame format:
-    0x7E [data] [next frame or 0xFF]
+    0x7E [data] | [next frame or 0xFF]
     
     escaped values
     0x7E -> 0x7E7E
     0xFF -> 0x7E7F
     
-    info frame
+    info frame **
     Type:       1 Byte (0x00)
     HW:         3 Byte | hardware version
     FW:         3 Byte | software version
@@ -70,12 +84,13 @@ data format
                -------
                16 Byte
     
-    state frame
+    system frame
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
-    State+RFU:n*2 Byte | sys info (state and custom data)
+    SYS:        1 Byte | system Message
+    RFU:        1 Byte | RFU (battery state by default)
                -------
-            n*2+3 Byte
+                5 Byte
     
     
     *1)  result = value & 0x7F
