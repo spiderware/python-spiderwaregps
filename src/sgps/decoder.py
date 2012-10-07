@@ -28,18 +28,19 @@ class Decoder(object):
         self.current_time = None
         
     def generate_object(self,f):
-        if f[0] == 0x01:
-            self.current_time = sgps.frames.Time(f[1:])
+        if f[0] == 0x01 and len(f) == 6:
+            self.current_time = sgps.frames.Time(f,None)
             return self.current_time
-        elif f[0] == 0x02 and len(f[1:]) == 15:
-            return sgps.frames.Position(f[1:],self.current_time.get_timestamp())
-        elif f[0] == 0x03:
-            return sgps.frames.System(f[1:],self.current_time.get_timestamp())
+        elif f[0] == 0x02 and len(f) == 16:
+            return sgps.frames.Position(f,self.current_time)
+        elif f[0] == 0x03 and len(f) == 5:
+            return sgps.frames.System(f,self.current_time)
         else:
-            return sgps.frames.Unknown(f)
+            return sgps.frames.Unknown(f,self.current_time)
 
     
     def decode(self,raw):
+        # binary data to frame objects
         byte = 0
         escape = 0
         frame = []

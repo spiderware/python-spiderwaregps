@@ -131,8 +131,9 @@ def binary_string(data,size):
 
 def print_help():
     print "possible commands:"
-    print "\tread"
+    print "\tconvert"
     print "\terase"
+    print "\tinfo"
 
 def print_flags(flags):
     if flags & (1<<2):
@@ -185,46 +186,232 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     
+def get_raw(filename=None):
+    if filename:
+        data = []
+        fh = open(filename,'rb')
+        for byte in fh.read():
+            data.append(ord(byte))
+        fh.close()
+        return data
+    data = []
+    current = 0
+    mem = d.get_memory_state()
+    while current < mem:
+        data += d.get_memory(current,100)
+        current += 100
+    return data
+
+def read_file(file):
+    # read data from file
+    ret = []
+    print 'reading file:',file
+    try:
+        fh = open(file,'rb')
+        for byte in fh.read():
+            ret.append( ord(byte))
+    except IOError:
+        print 'file',file,'does not exist'
+        exit(1)
+    return ret
+
+def read_device(info=False):
+    ret = []
+    # read data from USB
+    print 'reading data from USB device'
+    d = WorldLogUSB()
+    d.find()
+    try:
+        d.open_device()
+    except IndexError:
+        print 'Device not found'
+        exit(1)
+        
+    mem = d.get_memory_state()
+    if info:
+        print 'MEM  : %.02f'%(float(mem)/1024),'kByte'
+        print 'FLAGS:',binary_string(d.get_device_state(),32)
+        print_flags(d.get_device_state())
+        vbat, charge = d.get_battery_status()
+        print 'BATTERY: %.02fV, %.02f%%'%(vbat, charge)
+        d.get_unique_id()
+        d.get_device_info()
+    sys.stdout.write('         |')
+    sys.stdout.write( ' '*100)
+    sys.stdout.write( '|\n')
+    sys.stdout.write('READING: |')
+    sys.stdout.flush()
+    current = 0
+    mem = d.get_memory_state()
+    pc = mem/100
+    current_pc = 0
+    printed_pc = 0
+    while current < mem:
+        ret += d.get_memory(current,100)
+        current += 100
+        current_pc = current / pc
+        #print current_pc, printed_pc
+        if current_pc > printed_pc:
+            for i in xrange(current_pc-printed_pc):
+                sys.stdout.write('#')
+                sys.stdout.flush()
+            printed_pc = current_pc
+    print '|'
+    return ret
+    
+    
 last_on = None
 last_off = None
 on_time = 0
 off_time = 0
 color = bcolors.ENDC
 if __name__ == "__main__":
-    d = WorldLogUSB()
-    d.find()
-    d.open_device()
-    mem = d.get_memory_state()
-    current = 0
-    data = []
-    print 'MEM  : %.02f'%(float(mem)/1024),'kByte'
-    print 'FLAGS:',binary_string(d.get_device_state(),32)
-    print_flags(d.get_device_state())
-    vbat, charge = d.get_battery_status()
-    print 'BATTERY: %.02fV, %.02f%%'%(vbat, charge)
-    d.get_unique_id()
-    d.get_device_info()
-    
-    if not len(sys.argv) > 1:
-        print 'command missing'
+    # command line:
+    # [] command source destination
+    # examples:
+    # sgps.py read usb data.json
+    # sgps.py read data.bib data.json
+    # sgps.py erase
+    raw_data = []
+    if len(sys.argv) < 2:
+        print "no command given"
         print_help()
-        exit(1)
+    cmd = sys.argv[1]
     
-    if sys.argv[1] == 'erase':
+    if cmd == 'info':
+        pass
+        exit(0)
+    if cmd == 'convert':
+        if len(sys.argv) < 3:
+            print "no source given"
+            exit(1)
+        # reading data
+        if sys.argv[2] in ['USB','usb']:
+            raw_data = read_device(True)
+        else:
+            raw_data = read_file(sys.argv[2])
+            pass
+        # at this point raw_data contains readed data from file or USB
+        decoder = sgps.decoder.Decoder()
+        decoder.decode(raw_data)
+        
+        if len(sys.argv) == 3:
+            # print data on terminal
+            print 'converting to terminal output'
+            #print raw_data
+            for item in decoder.data:
+                if item.__class__.__name__ == 'System':
+                    if item.debug_level() <= 1:
+                        print item
+                else:
+                    print item
+            pass
+        elif sys.argv[3][-5:] == '.json':
+            print 'converting to JSON'
+            file = open(sys.argv[3],'w')
+            for item in decoder.data:
+                file.write(item.json())
+            file.close()
+            print 'JSON file: "%s" created'%sys.argv[3]
+
+        elif sys.argv[3][-4:] == '.bin':
+            # write file to disk (BIN format)
+            print 'saving as BIN'
+        elif sys.argv[3][-4:] == '.kml':
+            # write file to disk (KML format)
+            print 'converting to KML'
+        elif sys.argv[3][-4:] == '.gpx':
+            print 'converting to GPX'
+            # write file to disk (GPX format)
+            # Creating a new file:
+            # --------------------
+            
+            gpx = gpxpy.gpx.GPX()
+    
+            # Create first track in our GPX:
+            gpx_track = gpxpy.gpx.GPXTrack()
+            gpx.tracks.append(gpx_track)
+    
+            # Create first segment in our GPX track:
+            gpx_segment = gpxpy.gpx.GPXTrackSegment()
+            gpx_track.segments.append(gpx_segment)
+            last_known_position = None
+            for frame in decoder.data:
+                if frame.__class__.__name__ == "Position":
+                    last_known_position = frame
+                    gpx_segment.points.append(frame.gpx_element())
+                if frame.__class__.__name__ == "System" and last_known_position:
+                    gpx_segment.points.append(frame.gpx_element(last_known_position))
+    
+            with open(sys.argv[3], 'w') as f:
+                read_data = f.write(gpx.to_xml())
+                f.closed
+                
+            print 'GPX file: "%s" created'%sys.argv[3]
+        else:
+            print "unknown output format:",  sys.argv[3]
+            exit(1) 
+        exit(0)
+        
+    if cmd == "erase":
+        pass
+        exit(0)
+    print "unknown command:", sys.argv[1]
+    print_help()
+    exit(1)
+    
+    file = None
+    if '--file' in sys.argv:
+        try:
+            file = sys.argv[sys.argv.index('--file')+1]
+            cmd = sys.argv[sys.argv.index('--file')+2]
+        except IndexError:
+            print 'unknown arguments'
+            #print_help()
+            exit(1)
+        
+    if '--usb' in sys.argv:
+        try:
+            cmd = sys.argv[sys.argv.index('--usb')+1]
+        except IndexError:
+            print 'command missing'
+            print_help()
+            exit(1)
+            
+        d = WorldLogUSB()
+        d.find()
+        d.open_device()
+        mem = d.get_memory_state()
+        
+        data = []
+        
+        print 'MEM  : %.02f'%(float(mem)/1024),'kByte'
+        print 'FLAGS:',binary_string(d.get_device_state(),32)
+        print_flags(d.get_device_state())
+        vbat, charge = d.get_battery_status()
+        print 'BATTERY: %.02fV, %.02f%%'%(vbat, charge)
+        d.get_unique_id()
+        d.get_device_info()
+    
+    if cmd == 'info' and not file:
+        pass
+    elif cmd == 'erase' and not file:
         d.erase_memory()
         print 'erasing memory...'
         print 'MEM  : %.02f'%(float(d.get_memory_state())/1024),'kByte'
 
-    elif sys.argv[1] == 'save':
-        while current < mem:
-            data += d.get_memory(current,100)
-            current += 100; 
+    elif cmd == 'save_raw' and not file:
+        data = get_raw(file)
+        
+    elif cmd == 'save_gpx':
+        data = get_raw(file)
+        print data
     
         decoder = sgps.decoder.Decoder()
         decoder.decode(data)
         # Creating a new file:
         # --------------------
-
+        
         gpx = gpxpy.gpx.GPX()
 
         # Create first track in our GPX:
@@ -234,20 +421,19 @@ if __name__ == "__main__":
         # Create first segment in our GPX track:
         gpx_segment = gpxpy.gpx.GPXTrackSegment()
         gpx_track.segments.append(gpx_segment)
-
+        
         for frame in decoder.data:
+            print frame
             gps_data = frame.gps_data()
             if(gps_data != None):
                 gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(latitude=gps_data["latitude"], longitude=gps_data["longitude"], elevation=gps_data["elevation"],time=gps_data["timestamp"],horizontal_dilution=gps_data["horizontal_error"],vertical_dilution=gps_data["vertical_error"]))
 
-        with open(sys.argv[2], 'w') as f:
+        with open('out.gpx', 'w') as f:
             read_data = f.write(gpx.to_xml())
             f.closed
         
-    elif sys.argv[1] == 'read':
-        while current < mem:
-            data += d.get_memory(current,100)
-            current += 100; 
+    elif cmd == 'read':
+        data = get_raw(file)
     
         decoder = sgps.decoder.Decoder()
         decoder.decode(data)
