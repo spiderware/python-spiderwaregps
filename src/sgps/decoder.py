@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#    This file is part of spiderwareGPS.
+#    This file is part of the worldLog project.
 #    
-#    pygEDA is free software: you can redistribute it and/or modify
+#    python-worldLog-scripts is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
@@ -14,12 +14,21 @@
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with spiderwareGPS.  If not, see <http://www.gnu.org/licenses/>.
+#    along with python-worldLog-scripts.  If not, see <http://www.gnu.org/licenses/>.
 #
 #    Copyright 2012 Markus Hutzler, spiderware gmbh
 
+__author__ = "Markus Hutzler, spiderware gmbh"
+__copyright__ = "Copyright 2012, spiderware gmbh"
+__credits__ = ["Markus Hutzler", "Stefan Foulis", "David Gunzinger"]
+__license__ = "GPL"
+__version__ = "0.2"
+__maintainer__ = "Markus Hutzler"
+__status__ = "Beta"
+
 import sgps.frames
 import datetime
+import pois
 
 class Decoder(object):
 
@@ -38,7 +47,45 @@ class Decoder(object):
         else:
             return sgps.frames.Unknown(f,self.current_time)
 
-    
+    def objects(self,filter=[]):
+        # only for testing, this tool is not made for POIs and optimazions
+        ret = []
+        break_start = None
+        break_end = None
+        in_break = False
+        # add POIs to object list
+        for obj in self.data:
+            if obj.__class__.__name__ == "Position":
+                if ('POI' in filter or 'TrackStart' in filter) and in_break:
+                    in_break = False
+                    if break_end.timestamp() and break_start.timestamp():
+                        time = break_end.timestamp() - break_start.timestamp()
+                        if time.total_seconds() > 2*60 and 'POI' in filter:
+                            ret.append(sgps.frames.POI(current_position.location,break_start.timestamp(),"Break %s"%time,'','break',symbol='Picnic Area'))
+                        if time.total_seconds() > 10*60*60 and 'TrackStart' in filter:
+                            ret.append(sgps.frames.TrackStart(current_position.location,break_end.timestamp()))
+                current_position = obj
+                if 'Position' in filter:
+                    ret.append(obj)
+                
+            if obj.__class__.__name__ == "System":
+                if 'System' in filter:
+                    ret.append(obj)
+                
+                if 'POI' in filter or 'TrackStart' in filter:
+                    if obj.msg == 4 and not in_break: #Break beginns
+                        break_start = obj
+                        in_break = True
+                    elif obj.msg == 5: # Break ends
+                        break_end = obj
+                        
+                    elif obj.msg == 14 and 'POI' in filter: # waypoint
+                        #def __init__(self, location, timestamp, name, description, type):
+                        ret.append(sgps.frames.POI(current_position.location,obj.timestamp(),"Waypoint %d"%obj.rfu,'','std_waypoint'))
+        return ret
+                
+                    
+           
     def decode(self,raw):
         # binary data to frame objects
         byte = 0

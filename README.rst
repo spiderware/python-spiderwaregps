@@ -89,7 +89,7 @@ Data Format
     Type:       1 Byte (0x03)
     Time:       2 Byte | offest to time frame in s max 18h
     SYS:        1 Byte | system Message
-    RFU:        1 Byte | RFU (battery state by default)
+    RFU:        1 Byte | RFU (battery state by default )
                -------
                 5 Byte
     
