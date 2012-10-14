@@ -1,16 +1,11 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.2'
+version = '0.3a1'
 
 def read(fname):
     # read the contents of a text file
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
-
-install_requires = [
-    'setuptools',
-    'lxml',
-]
 
 setup(
     name = "spiderwaregps",
@@ -24,7 +19,11 @@ setup(
     author_email = 'stefan.foulis@gmail.com',
     package_dir = {'': 'src'},
     packages = ['sgps','sgps.export'],
-    install_requires = install_requires,
+    install_requires = [
+        'setuptools',
+        'lxml',
+        'gpxpy',
+    ],
     include_package_data = False,
     zip_safe = False,
     classifiers = [
